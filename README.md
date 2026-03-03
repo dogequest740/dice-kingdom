@@ -1,70 +1,89 @@
-# Telegram Mini App: Город (frontend + backend)
+# Telegram Mini App: Город (Vercel + Supabase)
 
-Полноценная заготовка под Telegram Mini App:
-- клиент для мобильного Telegram (`public/`);
-- backend API (`server.js`);
-- авторизация пользователя по `Telegram WebApp initData`;
-- серверная экономика (ресурсы/стоимость/улучшения);
-- сохранение прогресса пользователя в `data/game-db.json`.
+Проект переделан под serverless-архитектуру:
+- фронт на статических файлах (`index.html`, `app.js`, `styles.css`);
+- backend на Vercel Functions (`api/*`);
+- хранение прогресса в Supabase (`players.state` JSONB);
+- авторизация через Telegram WebApp `initData`.
 
-## Что уже реализовано
+## Реализовано
 
-- главный экран города с постройками;
+- экран города с постройками;
 - ресурсы: пшеница, дерево, камень;
-- постройка и улучшение зданий за ресурсы;
-- пассивная добыча ресурсов (офлайн прогресс тоже считается);
-- лимит хранения ресурсов (через `Замок` и `Хранилище`);
-- backend-эндпоинты:
-  - `POST /api/session`
-  - `POST /api/buildings/:buildingId/upgrade`
-  - `POST /api/state/select-building`
+- постройка и улучшение зданий;
+- пассивная добыча ресурсов;
+- серверная валидация экономики (стоимость/ресурсы/уровни);
+- API:
   - `GET /api/health`
+  - `POST /api/session`
+  - `POST /api/state/select-building`
+  - `POST /api/buildings/:buildingId/upgrade`
+  - `POST /api/dev/reset` (только при `ALLOW_DEV_AUTH=true`)
 
-## 1) Запуск проекта локально
+## Supabase: подготовка таблицы
+
+В SQL Editor выполни:
+
+```sql
+create table if not exists public.players (
+  user_id bigint primary key,
+  username text,
+  first_name text,
+  state jsonb not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create or replace function public.set_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists trg_players_updated_at on public.players;
+create trigger trg_players_updated_at
+before update on public.players
+for each row execute procedure public.set_updated_at();
+```
+
+Готовый файл со схемой: `supabase/schema.sql`.
+
+## Локальный запуск
 
 ```powershell
 npm install
+npx vercel login
 Copy-Item .env.example .env
-```
-
-Отредактируйте `.env`:
-- `TELEGRAM_BOT_TOKEN` - токен вашего бота из BotFather.
-- `ALLOW_DEV_AUTH=true` - оставить включенным для локального теста без Telegram.
-
-Запуск:
-
-```powershell
 npm run dev
 ```
 
-Приложение будет на `http://localhost:3000`.
+Открой `http://localhost:3000`.
 
-## 2) Локальный тест без Telegram
-
-Откройте:
-
+Для теста без Telegram:
 `http://localhost:3000/?devUserId=1&devUsername=test`
 
-Это работает только при `ALLOW_DEV_AUTH=true`.
+## .env параметры
 
-## 3) Запуск именно в Telegram (мобильный сценарий)
+- `TELEGRAM_BOT_TOKEN` - токен бота из BotFather.
+- `SUPABASE_URL` - URL проекта Supabase.
+- `SUPABASE_SERVICE_ROLE_KEY` - service_role ключ (только на backend).
+- `SUPABASE_PLAYERS_TABLE` - имя таблицы, по умолчанию `players`.
+- `ALLOW_DEV_AUTH` - включить dev-запуск без Telegram.
+- `TG_AUTH_MAX_AGE_SEC` - TTL `initData` в секундах.
 
-Telegram Mini App требует HTTPS URL.
+## Деплой на Vercel (бесплатно)
 
-1. Поднимите туннель на локальный сервер (например, Cloudflare Tunnel или ngrok) на `http://localhost:3000`.
-2. Получите HTTPS URL вида `https://xxxxx.trycloudflare.com`.
-3. В BotFather настройте Mini App URL для бота (Menu Button / Web App).
-4. Откройте бота в мобильном Telegram и запускайте Mini App оттуда.
-
-Важно:
-- backend проверяет подпись `initData`, поэтому `TELEGRAM_BOT_TOKEN` должен быть корректным.
-- если токен неверный, `POST /api/session` вернет ошибку авторизации.
+1. Импортируй GitHub-репозиторий в Vercel.
+2. В `Project Settings -> Environment Variables` добавь переменные из `.env`.
+3. Нажми Deploy.
+4. Проверь `https://<project>.vercel.app/api/health`.
+5. В BotFather (`/setmenubutton`) укажи `https://<project>.vercel.app`.
 
 ## Структура
 
-- `server.js` - Express backend + Telegram auth + API.
-- `shared/game-config.js` - единые игровые расчеты (используются и клиентом, и сервером).
-- `public/index.html` - разметка Mini App.
-- `public/styles.css` - мобильные стили города.
-- `public/app.js` - клиентская логика и вызовы API.
-- `data/game-db.json` - локальная база прогресса игроков (создается автоматически).
+- `api/*` - Vercel Functions.
+- `lib/*` - auth/API/Supabase хелперы.
+- `shared/game-config.js` - единая игровая логика для клиента и backend.
+- `index.html`, `app.js`, `styles.css` - UI Mini App.
