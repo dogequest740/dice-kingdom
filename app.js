@@ -3,6 +3,8 @@ import {
   BUILDING_BY_ID,
   RESOURCE_META,
   applyProduction,
+  getActiveUpgrade,
+  getBuildingPowerAtLevel,
   getCapacity,
   getCharacterLevel,
   getClaimableForBuilding,
@@ -40,6 +42,19 @@ let panelBuildingId = null;
 
 function formatNumber(value) {
   return Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(Math.floor(value));
+}
+
+function formatDuration(totalSec) {
+  const sec = Math.max(0, Math.floor(totalSec));
+  const days = Math.floor(sec / 86400);
+  const hours = Math.floor((sec % 86400) / 3600);
+  const minutes = Math.floor((sec % 3600) / 60);
+  const seconds = sec % 60;
+
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
 }
 
 function setStatus(message, isError = false) {
@@ -125,10 +140,6 @@ function renderHero() {
   heroPowerEl.textContent = `Power ${formatNumber(getPower(state))}`;
 }
 
-function formatRate(value) {
-  return value.toFixed(1).replace(".0", "");
-}
-
 function renderPanel() {
   if (!state || !panelBuildingId) {
     panelEl.classList.add("hidden");
@@ -141,8 +152,10 @@ function renderPanel() {
     return;
   }
 
+  const nowTs = Date.now();
   const level = getLevel(state, building.id);
-  const readiness = getUpgradeReadiness(state, building.id);
+  const readiness = getUpgradeReadiness(state, building.id, nowTs);
+  const activeUpgrade = getActiveUpgrade(state, nowTs);
   const nextLabel = level === 0 ? "Build" : "Upgrade";
 
   panelEl.classList.remove("hidden");
@@ -151,6 +164,12 @@ function renderPanel() {
   panelDescEl.textContent = building.desc;
 
   panelProductionEl.innerHTML = "";
+
+  const durationChip = document.createElement("span");
+  durationChip.className = "stat-chip";
+  durationChip.textContent = `Time: ${formatDuration(readiness.durationSec || 0)}`;
+  panelProductionEl.appendChild(durationChip);
+
   if (building.productionPerLevel) {
     const [resource, amount] = Object.entries(building.productionPerLevel)[0];
     const claimable = getClaimableForBuilding(state, building.id);
@@ -164,20 +183,20 @@ function renderPanel() {
     if (claimable && claimable.collectible > 0) {
       const readyChip = document.createElement("span");
       readyChip.className = "stat-chip";
-      readyChip.textContent = `Ready to collect ${RESOURCE_META[resource].icon} ${formatNumber(claimable.collectible)}`;
+      readyChip.textContent = `Ready ${RESOURCE_META[resource].icon} ${formatNumber(claimable.collectible)}`;
       panelProductionEl.appendChild(readyChip);
     }
 
     if (level > 0) {
       const currentRateChip = document.createElement("span");
       currentRateChip.className = "stat-chip";
-      currentRateChip.textContent = `Current +${formatRate(amount * level)}/s`;
+      currentRateChip.textContent = `Current +${(amount * level).toFixed(1).replace(".0", "")}/s`;
       panelProductionEl.appendChild(currentRateChip);
     }
 
     const nextRateChip = document.createElement("span");
     nextRateChip.className = "stat-chip";
-    nextRateChip.textContent = `After +${formatRate(amount * (level + 1))}/s`;
+    nextRateChip.textContent = `After +${(amount * (level + 1)).toFixed(1).replace(".0", "")}/s`;
     panelProductionEl.appendChild(nextRateChip);
   }
 
@@ -188,23 +207,21 @@ function renderPanel() {
     panelProductionEl.appendChild(capChip);
   }
 
-  const currentPower = level > 0 ? (building.basePower || 0) + Math.max(0, level - 1) * (building.powerPerLevel || 0) : 0;
-  const nextPower = (building.basePower || 0) + Math.max(0, level) * (building.powerPerLevel || 0);
-
+  const currentPower = getBuildingPowerAtLevel(building.id, level);
+  const nextPower = getBuildingPowerAtLevel(building.id, level + 1);
   if (level > 0) {
     const currentPowerChip = document.createElement("span");
     currentPowerChip.className = "stat-chip";
     currentPowerChip.textContent = `Current power +${formatNumber(currentPower)}`;
     panelProductionEl.appendChild(currentPowerChip);
   }
-
   const nextPowerChip = document.createElement("span");
   nextPowerChip.className = "stat-chip";
   nextPowerChip.textContent = `After power +${formatNumber(nextPower)}`;
   panelProductionEl.appendChild(nextPowerChip);
 
   panelCostEl.innerHTML = "";
-  for (const [resource, amount] of Object.entries(readiness.cost)) {
+  for (const [resource, amount] of Object.entries(readiness.cost || {})) {
     const chip = document.createElement("span");
     const enough = (state.resources[resource] || 0) >= amount;
     chip.className = `stat-chip${enough ? "" : " warn"}`;
@@ -219,28 +236,41 @@ function renderPanel() {
     chip.textContent = issue;
     panelRulesEl.appendChild(chip);
   }
-  if (!readiness.canAfford) {
+  if (!readiness.canAfford && Object.keys(readiness.cost || {}).length > 0) {
     const chip = document.createElement("span");
     chip.className = "stat-chip warn";
     chip.textContent = "Not enough resources";
     panelRulesEl.appendChild(chip);
   }
 
-  panelActionEl.textContent = `${nextLabel} to Lv. ${readiness.nextLevel}`;
-  panelActionEl.disabled = requestInFlight || !readiness.canUpgrade;
+  if (activeUpgrade) {
+    const busyName = BUILDING_BY_ID[activeUpgrade.buildingId]?.name || activeUpgrade.buildingId;
+    if (activeUpgrade.buildingId === building.id) {
+      panelActionEl.textContent = `Upgrading... ${formatDuration(activeUpgrade.remainingSec)}`;
+    } else {
+      panelActionEl.textContent = `Busy: ${busyName} ${formatDuration(activeUpgrade.remainingSec)}`;
+    }
+    panelActionEl.disabled = true;
+  } else {
+    panelActionEl.textContent = `${nextLabel} to Lv. ${readiness.nextLevel}`;
+    panelActionEl.disabled = requestInFlight || !readiness.canUpgrade;
+  }
   panelActionEl.dataset.buildingId = building.id;
 }
 
 function renderMap() {
   if (!state) return;
+  const activeUpgrade = getActiveUpgrade(state, Date.now());
 
   for (const building of BUILDINGS) {
     const nodeRefs = mapNodes.get(building.id);
     if (!nodeRefs) continue;
 
-    const { buildingButton, collectButton } = nodeRefs;
+    const { buildingButton, collectButton, timerLabel } = nodeRefs;
     const level = getLevel(state, building.id);
     const built = level > 0;
+    const upgradingThis = activeUpgrade && activeUpgrade.buildingId === building.id;
+
     buildingButton.dataset.built = String(built);
     buildingButton.classList.toggle("selected", panelBuildingId === building.id);
 
@@ -249,8 +279,16 @@ function renderMap() {
     iconEl.textContent = built ? building.icon : "🏗️";
     badgeEl.textContent = built ? `${building.name} Lv.${level}` : `Build ${building.name}`;
 
+    if (upgradingThis) {
+      timerLabel.classList.remove("hidden");
+      timerLabel.textContent = `Lv.${activeUpgrade.toLevel} • ${formatDuration(activeUpgrade.remainingSec)}`;
+    } else {
+      timerLabel.classList.add("hidden");
+      timerLabel.textContent = "";
+    }
+
     const claimable = getClaimableForBuilding(state, building.id);
-    if (claimable && claimable.collectible > 0) {
+    if (!upgradingThis && claimable && claimable.collectible > 0) {
       collectButton.classList.remove("hidden");
       collectButton.textContent = `${RESOURCE_META[claimable.resource].icon} ${formatNumber(claimable.collectible)}`;
     } else {
@@ -283,6 +321,7 @@ function buildMapNodes() {
 
     const buildingButton = node.querySelector(".building");
     const collectButton = node.querySelector(".collect-btn");
+    const timerLabel = node.querySelector(".upgrade-timer");
 
     buildingButton.addEventListener("click", async () => {
       if (!state) return;
@@ -301,7 +340,7 @@ function buildMapNodes() {
       await onCollect(building.id);
     });
 
-    mapNodes.set(building.id, { node, buildingButton, collectButton });
+    mapNodes.set(building.id, { node, buildingButton, collectButton, timerLabel });
     mapEl.appendChild(node);
   }
 }
@@ -319,13 +358,14 @@ async function onUpgrade() {
 
   requestInFlight = true;
   renderPanel();
-  setStatus("Applying upgrade...");
+  setStatus("Starting upgrade...");
 
   try {
     const snapshot = await api(`/api/buildings/${buildingId}/upgrade`, { body: {} });
     setStateFromSnapshot(snapshot);
     window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred("success");
-    setStatus("Upgrade completed");
+    const timeLabel = snapshot.upgrade?.durationSec ? formatDuration(snapshot.upgrade.durationSec) : "";
+    setStatus(timeLabel ? `Upgrade started (${timeLabel})` : "Upgrade started");
   } catch (error) {
     setStatus(error.message, true);
   } finally {
@@ -398,11 +438,8 @@ async function boot() {
 
   setInterval(() => {
     if (!state) return;
-    const resourcesBefore = { ...state.resources };
     applyProduction(state, Date.now());
-    state.resources = resourcesBefore;
-    renderMap();
-    renderPanel();
+    render();
   }, TICK_MS);
 }
 

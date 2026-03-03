@@ -206,6 +206,25 @@ button {
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
 }
 
+.upgrade-timer {
+  position: absolute;
+  left: 56px;
+  top: -26px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(30, 39, 52, 0.9);
+  color: #fff0b3;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  white-space: nowrap;
+}
+
+.upgrade-timer.hidden {
+  display: none;
+}
+
 .collect-btn.hidden {
   display: none;
 }
