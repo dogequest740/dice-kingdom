@@ -15,27 +15,28 @@ import {
 
 const TICK_MS = 1000;
 const RESOURCE_ORDER = ["food", "wood", "stone", "crystals"];
+const RESOURCE_ICONS = {
+  food: "./assets/custom/resource-food.png",
+  wood: "./assets/custom/resource-wood.png",
+  stone: "./assets/custom/resource-stone.png",
+  crystals: "./assets/custom/resource-crystals.png",
+};
+const CONSTRUCTION_SPRITE = { src: "./assets/custom/construction.png", width: 168, height: 142, offsetY: 10 };
 const BUILDING_SPRITES = {
   castle: [
-    { minLevel: 1, src: "./assets/tileset/buildings/house-hay-3.png", width: 175, height: 128 },
-    { minLevel: 20, src: "./assets/tileset/buildings/house-hay-4-purple.png", width: 128, height: 128 },
+    { minLevel: 1, src: "./assets/custom/castle.png", width: 220, height: 246, offsetY: 10 },
   ],
   farm: [
-    { minLevel: 1, src: "./assets/tileset/buildings/well-hay-1.png", width: 56, height: 74 },
-    { minLevel: 4, src: "./assets/tileset/buildings/house-hay-1.png", width: 89, height: 91 },
-    { minLevel: 12, src: "./assets/tileset/buildings/house-hay-2.png", width: 157, height: 112 },
+    { minLevel: 1, src: "./assets/custom/farm.png", width: 210, height: 160, offsetY: 8 },
   ],
   sawmill: [
-    { minLevel: 1, src: "./assets/tileset/buildings/house-hay-1.png", width: 89, height: 91 },
-    { minLevel: 10, src: "./assets/tileset/buildings/house-hay-2.png", width: 157, height: 112 },
+    { minLevel: 1, src: "./assets/custom/sawmill.png", width: 188, height: 188, offsetY: 9 },
   ],
   quarry: [
-    { minLevel: 1, src: "./assets/tileset/buildings/citywall-gate-1.png", width: 80, height: 96 },
-    { minLevel: 16, src: "./assets/tileset/buildings/house-hay-3.png", width: 175, height: 128 },
+    { minLevel: 1, src: "./assets/custom/construction.png", width: 172, height: 146, offsetY: 10 },
   ],
   storage: [
-    { minLevel: 1, src: "./assets/tileset/buildings/house-hay-2.png", width: 157, height: 112 },
-    { minLevel: 18, src: "./assets/tileset/buildings/house-hay-4-purple.png", width: 128, height: 128 },
+    { minLevel: 1, src: "./assets/custom/storage.png", width: 178, height: 178, offsetY: 8 },
   ],
 };
 
@@ -165,9 +166,20 @@ function renderResources() {
     const value = state.resources[resourceId] || 0;
     const chip = document.createElement("div");
     chip.className = "resource-chip";
-    chip.textContent = meta.capped
-      ? `${meta.icon} ${meta.label}: ${formatNumber(value)}/${formatNumber(cap)}`
-      : `${meta.icon} ${meta.label}: ${formatNumber(value)}`;
+
+    const icon = document.createElement("img");
+    icon.className = "resource-icon";
+    icon.alt = meta.label;
+    icon.src = RESOURCE_ICONS[resourceId];
+
+    const text = document.createElement("span");
+    text.className = "resource-text";
+    text.textContent = meta.capped
+      ? `${meta.label}: ${formatNumber(value)}/${formatNumber(cap)}`
+      : `${meta.label}: ${formatNumber(value)}`;
+
+    chip.appendChild(icon);
+    chip.appendChild(text);
     resourceBarEl.appendChild(chip);
   }
 }
@@ -312,11 +324,20 @@ function renderMap() {
     buildingButton.dataset.built = String(built);
     buildingButton.classList.toggle("selected", panelBuildingId === building.id);
 
-    const sprite = getBuildingSprite(building.id, level);
-    if (built && sprite) {
+    const sprite = built ? getBuildingSprite(building.id, level) : CONSTRUCTION_SPRITE;
+    if (sprite) {
       spriteEl.src = sprite.src;
-      spriteEl.width = sprite.width;
-      spriteEl.height = sprite.height;
+      if (sprite.width) {
+        spriteEl.width = sprite.width;
+      } else {
+        spriteEl.removeAttribute("width");
+      }
+      if (sprite.height) {
+        spriteEl.height = sprite.height;
+      } else {
+        spriteEl.removeAttribute("height");
+      }
+      spriteEl.style.transform = sprite.offsetY ? `translateY(${sprite.offsetY}px)` : "";
       spriteEl.alt = `${building.name} level ${level}`;
       spriteEl.classList.remove("hidden");
       placeholderEl.classList.add("hidden");
@@ -324,6 +345,7 @@ function renderMap() {
       spriteEl.removeAttribute("src");
       spriteEl.removeAttribute("width");
       spriteEl.removeAttribute("height");
+      spriteEl.style.transform = "";
       spriteEl.alt = "";
       spriteEl.classList.add("hidden");
       placeholderEl.textContent = built ? building.icon : "🏗️";

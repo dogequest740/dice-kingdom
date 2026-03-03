@@ -73,11 +73,24 @@ button {
 .resource-chip {
   display: flex;
   align-items: center;
+  gap: 6px;
   border-radius: 999px;
-  padding: 6px 10px;
-  background: rgba(0, 0, 0, 0.4);
+  padding: 4px 9px 4px 6px;
+  background: rgba(0, 0, 0, 0.5);
   font-size: 12px;
   white-space: nowrap;
+}
+
+.resource-icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
+}
+
+.resource-text {
+  display: inline-block;
+  line-height: 1.1;
 }
 
 .hero-card {
@@ -143,21 +156,21 @@ button {
   position: absolute;
   inset: 0 0 80px 0;
   background:
-    linear-gradient(180deg, rgba(15, 25, 38, 0.12), rgba(15, 25, 38, 0.32)),
-    url("./assets/tileset/map/beginning-fields.png");
-  background-position: center center;
+    linear-gradient(180deg, rgba(15, 25, 38, 0.06), rgba(15, 25, 38, 0.22)),
+    url("./assets/custom/background.png");
+  background-position: center top;
   background-repeat: no-repeat;
-  background-size: cover;
+  background-size: 100% 100%;
 }
 
 .building-node {
   position: absolute;
-  width: 152px;
-  transform: translate(-50%, -50%);
+  width: 192px;
+  transform: translate(-50%, -84%);
 }
 
 .building {
-  width: 152px;
+  width: 192px;
   background: transparent;
   border: 0;
   padding: 0;
@@ -166,8 +179,8 @@ button {
 
 .building-icon {
   position: relative;
-  width: 136px;
-  height: 108px;
+  width: 176px;
+  height: 152px;
   margin: 0 auto;
   display: flex;
   align-items: flex-end;
@@ -179,8 +192,8 @@ button {
   position: absolute;
   left: 50%;
   bottom: 10px;
-  width: 72px;
-  height: 14px;
+  width: 86px;
+  height: 16px;
   border-radius: 50%;
   transform: translateX(-50%);
   background: rgba(0, 0, 0, 0.3);
@@ -195,7 +208,7 @@ button {
   width: auto;
   height: auto;
   object-fit: contain;
-  image-rendering: pixelated;
+  image-rendering: auto;
   filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.22));
 }
 
@@ -233,8 +246,8 @@ button {
 
 .building-badge {
   display: inline-flex;
-  margin-top: 8px;
-  padding: 4px 8px;
+  margin-top: 6px;
+  padding: 4px 9px;
   border-radius: 999px;
   background: rgba(23, 30, 40, 0.76);
   font-size: 13px;
@@ -245,7 +258,7 @@ button {
 .collect-btn {
   position: absolute;
   left: 50%;
-  top: -20px;
+  top: -24px;
   transform: translateX(-50%);
   border: 0;
   border-radius: 999px;
@@ -260,7 +273,7 @@ button {
 .upgrade-timer {
   position: absolute;
   left: 50%;
-  top: -24px;
+  top: -28px;
   transform: translateX(-50%);
   border-radius: 999px;
   padding: 4px 9px;
@@ -407,7 +420,12 @@ button {
 @media (max-width: 420px) {
   .resource-chip {
     font-size: 11px;
-    padding: 5px 8px;
+    padding: 3px 7px 3px 5px;
+  }
+
+  .resource-icon {
+    width: 16px;
+    height: 16px;
   }
 
   .hero-avatar {
@@ -421,16 +439,16 @@ button {
   }
 
   .building-node {
-    width: 132px;
+    width: 164px;
   }
 
   .building {
-    width: 132px;
+    width: 164px;
   }
 
   .building-icon {
-    width: 118px;
-    height: 96px;
+    width: 148px;
+    height: 126px;
   }
 
   .building-badge {
