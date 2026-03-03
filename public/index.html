@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Город - Telegram Mini App</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <button class="close-btn" type="button">Закрыть</button>
+        <div class="resources" id="resourceBar"></div>
+      </header>
+
+      <main class="map-wrap">
+        <section class="map" id="map"></section>
+      </main>
+
+      <section class="panel hidden" id="buildingPanel" aria-live="polite">
+        <div class="panel-head">
+          <h2 id="panelTitle"></h2>
+          <span id="panelLevel"></span>
+        </div>
+        <p id="panelDesc"></p>
+        <div class="panel-production" id="panelProduction"></div>
+        <div class="cost-row" id="panelCost"></div>
+        <button class="action-btn" id="panelAction" type="button"></button>
+        <p class="status-line" id="statusLine"></p>
+      </section>
+
+      <nav class="bottom-nav">
+        <button class="tab tab-active" type="button">Город</button>
+        <button class="tab" type="button">Бои</button>
+        <button class="tab" type="button">Клан</button>
+        <button class="tab" type="button">Задания</button>
+      </nav>
+    </div>
+
+    <template id="buildingTemplate">
+      <button class="building" type="button">
+        <div class="building-icon"></div>
+        <div class="building-badge"></div>
+      </button>
+    </template>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
