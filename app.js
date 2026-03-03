@@ -4,12 +4,15 @@ import {
   RESOURCE_META,
   applyProduction,
   getCapacity,
+  getCharacterLevel,
+  getClaimableForBuilding,
   getLevel,
-  getUpgradeCost,
-  hasEnoughResources,
+  getPower,
+  getUpgradeReadiness,
 } from "/shared/game-config.js";
 
 const TICK_MS = 1000;
+const RESOURCE_ORDER = ["food", "wood", "stone", "crystals"];
 
 const mapEl = document.getElementById("map");
 const panelEl = document.getElementById("buildingPanel");
@@ -18,20 +21,23 @@ const panelLevelEl = document.getElementById("panelLevel");
 const panelDescEl = document.getElementById("panelDesc");
 const panelProductionEl = document.getElementById("panelProduction");
 const panelCostEl = document.getElementById("panelCost");
+const panelRulesEl = document.getElementById("panelRules");
 const panelActionEl = document.getElementById("panelAction");
 const statusLineEl = document.getElementById("statusLine");
+const heroLevelEl = document.getElementById("heroLevel");
+const heroPowerEl = document.getElementById("heroPower");
 const resourceBarEl = document.getElementById("resourceBar");
 const closeBtnEl = document.querySelector(".close-btn");
 const template = document.getElementById("buildingTemplate");
 
-const mapButtons = new Map();
+const mapNodes = new Map();
 let state = null;
 let requestInFlight = false;
 let initData = "";
 let devAuth = null;
 
 function formatNumber(value) {
-  return Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(Math.floor(value));
+  return Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(Math.floor(value));
 }
 
 function setStatus(message, isError = false) {
@@ -98,21 +104,27 @@ function renderResources() {
   if (!state) return;
   const cap = getCapacity(state);
   resourceBarEl.innerHTML = "";
-  for (const [id, meta] of Object.entries(RESOURCE_META)) {
+
+  for (const resourceId of RESOURCE_ORDER) {
+    const meta = RESOURCE_META[resourceId];
+    const value = state.resources[resourceId] || 0;
     const chip = document.createElement("div");
     chip.className = "resource-chip";
-    chip.textContent = `${meta.icon} ${formatNumber(state.resources[id])}/${formatNumber(cap)}`;
+    chip.textContent = meta.capped
+      ? `${meta.icon} ${meta.label}: ${formatNumber(value)}/${formatNumber(cap)}`
+      : `${meta.icon} ${meta.label}: ${formatNumber(value)}`;
     resourceBarEl.appendChild(chip);
   }
 }
 
-function productionLabelForLevel(building, level) {
-  if (!building.productionPerLevel || level <= 0) return null;
-  return Object.entries(building.productionPerLevel).map(([resource, amount]) => {
-    const icon = RESOURCE_META[resource].icon;
-    const perSec = (amount * level).toFixed(1).replace(".0", "");
-    return `${icon} +${perSec}/с`;
-  });
+function renderHero() {
+  if (!state) return;
+  heroLevelEl.textContent = `Lv. ${getCharacterLevel(state)}`;
+  heroPowerEl.textContent = `Power ${formatNumber(getPower(state))}`;
+}
+
+function formatRate(value) {
+  return value.toFixed(1).replace(".0", "");
 }
 
 function renderPanel() {
@@ -127,107 +139,174 @@ function renderPanel() {
     return;
   }
 
-  panelEl.classList.remove("hidden");
   const level = getLevel(state, building.id);
-  const cost = getUpgradeCost(state, building.id);
-  const canAfford = hasEnoughResources(state, cost);
-  const nextLabel = level === 0 ? "Построить" : "Улучшить";
+  const readiness = getUpgradeReadiness(state, building.id);
+  const nextLabel = level === 0 ? "Build" : "Upgrade";
 
+  panelEl.classList.remove("hidden");
   panelTitleEl.textContent = building.name;
-  panelLevelEl.textContent = level === 0 ? "Не построено" : `Уровень ${level}`;
+  panelLevelEl.textContent = level === 0 ? "Not built" : `Level ${level}`;
   panelDescEl.textContent = building.desc;
 
   panelProductionEl.innerHTML = "";
-  const currentProd = productionLabelForLevel(building, level);
-  if (currentProd?.length) {
-    for (const text of currentProd) {
-      const chip = document.createElement("span");
-      chip.className = "stat-chip";
-      chip.textContent = `Сейчас ${text}`;
-      panelProductionEl.appendChild(chip);
+  if (building.productionPerLevel) {
+    const [resource, amount] = Object.entries(building.productionPerLevel)[0];
+    const claimable = getClaimableForBuilding(state, building.id);
+    const storedRaw = Math.floor(state.claimables?.[building.id] || 0);
+
+    const storedChip = document.createElement("span");
+    storedChip.className = "stat-chip";
+    storedChip.textContent = `${RESOURCE_META[resource].icon} Stored ${formatNumber(storedRaw)}`;
+    panelProductionEl.appendChild(storedChip);
+
+    if (claimable && claimable.collectible > 0) {
+      const readyChip = document.createElement("span");
+      readyChip.className = "stat-chip";
+      readyChip.textContent = `Ready to collect ${RESOURCE_META[resource].icon} ${formatNumber(claimable.collectible)}`;
+      panelProductionEl.appendChild(readyChip);
     }
+
+    if (level > 0) {
+      const currentRateChip = document.createElement("span");
+      currentRateChip.className = "stat-chip";
+      currentRateChip.textContent = `Current +${formatRate(amount * level)}/s`;
+      panelProductionEl.appendChild(currentRateChip);
+    }
+
+    const nextRateChip = document.createElement("span");
+    nextRateChip.className = "stat-chip";
+    nextRateChip.textContent = `After +${formatRate(amount * (level + 1))}/s`;
+    panelProductionEl.appendChild(nextRateChip);
   }
 
-  const nextProd = productionLabelForLevel(building, level + 1);
-  if (nextProd?.length) {
-    for (const text of nextProd) {
-      const chip = document.createElement("span");
-      chip.className = "stat-chip";
-      chip.textContent = `После ${text}`;
-      panelProductionEl.appendChild(chip);
-    }
+  if (building.capacityPerLevel) {
+    const capChip = document.createElement("span");
+    capChip.className = "stat-chip";
+    capChip.textContent = `Storage +${formatNumber(building.capacityPerLevel)} each level`;
+    panelProductionEl.appendChild(capChip);
   }
 
-  if (!currentProd && building.capacityPerLevel) {
-    const chip = document.createElement("span");
-    chip.className = "stat-chip";
-    chip.textContent = `Вместимость +${formatNumber(building.capacityPerLevel * (level + 1))}`;
-    panelProductionEl.appendChild(chip);
+  const currentPower = level > 0 ? (building.basePower || 0) + Math.max(0, level - 1) * (building.powerPerLevel || 0) : 0;
+  const nextPower = (building.basePower || 0) + Math.max(0, level) * (building.powerPerLevel || 0);
+
+  if (level > 0) {
+    const currentPowerChip = document.createElement("span");
+    currentPowerChip.className = "stat-chip";
+    currentPowerChip.textContent = `Current power +${formatNumber(currentPower)}`;
+    panelProductionEl.appendChild(currentPowerChip);
   }
+
+  const nextPowerChip = document.createElement("span");
+  nextPowerChip.className = "stat-chip";
+  nextPowerChip.textContent = `After power +${formatNumber(nextPower)}`;
+  panelProductionEl.appendChild(nextPowerChip);
 
   panelCostEl.innerHTML = "";
-  for (const [resource, amount] of Object.entries(cost)) {
+  for (const [resource, amount] of Object.entries(readiness.cost)) {
     const chip = document.createElement("span");
-    const enough = state.resources[resource] >= amount;
+    const enough = (state.resources[resource] || 0) >= amount;
     chip.className = `stat-chip${enough ? "" : " warn"}`;
     chip.textContent = `${RESOURCE_META[resource].icon} ${formatNumber(amount)}`;
     panelCostEl.appendChild(chip);
   }
 
-  panelActionEl.textContent = `${nextLabel} до ${level + 1} ур.`;
-  panelActionEl.disabled = !canAfford || requestInFlight;
+  panelRulesEl.innerHTML = "";
+  for (const issue of readiness.ruleIssues) {
+    const chip = document.createElement("span");
+    chip.className = "stat-chip warn";
+    chip.textContent = issue;
+    panelRulesEl.appendChild(chip);
+  }
+  if (!readiness.canAfford) {
+    const chip = document.createElement("span");
+    chip.className = "stat-chip warn";
+    chip.textContent = "Not enough resources";
+    panelRulesEl.appendChild(chip);
+  }
+
+  panelActionEl.textContent = `${nextLabel} to Lv. ${readiness.nextLevel}`;
+  panelActionEl.disabled = requestInFlight || !readiness.canUpgrade;
   panelActionEl.dataset.buildingId = building.id;
 }
 
 function renderMap() {
   if (!state) return;
+
   for (const building of BUILDINGS) {
-    const btn = mapButtons.get(building.id);
-    if (!btn) continue;
+    const nodeRefs = mapNodes.get(building.id);
+    if (!nodeRefs) continue;
+
+    const { buildingButton, collectButton } = nodeRefs;
     const level = getLevel(state, building.id);
     const built = level > 0;
-    btn.dataset.built = String(built);
-    btn.classList.toggle("selected", state.selected === building.id);
+    buildingButton.dataset.built = String(built);
+    buildingButton.classList.toggle("selected", state.selected === building.id);
 
-    const iconEl = btn.querySelector(".building-icon");
-    const badgeEl = btn.querySelector(".building-badge");
+    const iconEl = buildingButton.querySelector(".building-icon");
+    const badgeEl = buildingButton.querySelector(".building-badge");
     iconEl.textContent = built ? building.icon : "🏗️";
-    badgeEl.textContent = built ? `${level} ${building.name}` : `Построить: ${building.name}`;
+    badgeEl.textContent = built ? `${building.name} Lv.${level}` : `Build ${building.name}`;
+
+    const claimable = getClaimableForBuilding(state, building.id);
+    if (claimable && claimable.collectible > 0) {
+      collectButton.classList.remove("hidden");
+      collectButton.textContent = `${RESOURCE_META[claimable.resource].icon} ${formatNumber(claimable.collectible)}`;
+    } else {
+      collectButton.classList.add("hidden");
+      collectButton.textContent = "";
+    }
   }
 }
 
 function render() {
   renderResources();
+  renderHero();
   renderMap();
   renderPanel();
 }
 
+function setStateFromSnapshot(snapshot) {
+  state = snapshot.state;
+  render();
+}
+
 function buildMapNodes() {
   mapEl.innerHTML = "";
+  mapNodes.clear();
+
   for (const building of BUILDINGS) {
     const node = template.content.firstElementChild.cloneNode(true);
     node.style.left = `${building.pos.x}%`;
     node.style.top = `${building.pos.y}%`;
-    node.addEventListener("click", async () => {
+
+    const buildingButton = node.querySelector(".building");
+    const collectButton = node.querySelector(".collect-btn");
+
+    buildingButton.addEventListener("click", async () => {
       if (!state) return;
       state.selected = building.id;
       render();
       try {
         await api("/api/state/select-building", { body: { buildingId: building.id } });
       } catch {
-        setStatus("Не удалось сохранить выбранное здание", true);
+        setStatus("Failed to save selected building", true);
       }
     });
-    mapButtons.set(building.id, node);
+
+    collectButton.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      await onCollect(building.id);
+    });
+
+    mapNodes.set(building.id, { node, buildingButton, collectButton });
     mapEl.appendChild(node);
   }
 }
 
 async function loadSession() {
   const snapshot = await api("/api/session");
-  state = snapshot.state;
-  setStatus("Город синхронизирован с сервером");
-  render();
+  setStateFromSnapshot(snapshot);
+  setStatus("City synced");
 }
 
 async function onUpgrade() {
@@ -237,14 +316,39 @@ async function onUpgrade() {
 
   requestInFlight = true;
   renderPanel();
-  setStatus("Сохраняю улучшение...");
+  setStatus("Applying upgrade...");
 
   try {
     const snapshot = await api(`/api/buildings/${buildingId}/upgrade`, { body: {} });
-    state = snapshot.state;
+    setStateFromSnapshot(snapshot);
     window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred("success");
-    setStatus("Улучшение завершено");
-    render();
+    setStatus("Upgrade completed");
+  } catch (error) {
+    setStatus(error.message, true);
+  } finally {
+    requestInFlight = false;
+    renderPanel();
+  }
+}
+
+async function onCollect(buildingId) {
+  if (requestInFlight || !state) return;
+
+  requestInFlight = true;
+  renderPanel();
+  setStatus("Collecting...");
+
+  try {
+    const snapshot = await api(`/api/buildings/${buildingId}/collect`, { body: {} });
+    setStateFromSnapshot(snapshot);
+    const entry = Object.entries(snapshot.collected || {})[0];
+    if (entry) {
+      const [resource, amount] = entry;
+      setStatus(`Collected ${RESOURCE_META[resource].label} +${formatNumber(amount)}`);
+    } else {
+      setStatus("Collected");
+    }
+    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred("light");
   } catch (error) {
     setStatus(error.message, true);
   } finally {
@@ -270,14 +374,13 @@ async function boot() {
   initDevAuth();
   buildMapNodes();
   setupEvents();
-  setStatus("Подключение к серверу...");
+  setStatus("Connecting to server...");
 
   try {
     await loadSession();
   } catch (error) {
-    const notInTelegram = "Unauthorized";
-    if (String(error.message).includes(notInTelegram)) {
-      setStatus("Запусти игру из Telegram. Для dev: ?devUserId=1", true);
+    if (String(error.message).includes("Unauthorized")) {
+      setStatus("Open this Mini App from Telegram. Dev mode: ?devUserId=1", true);
       return;
     }
     setStatus(error.message, true);
@@ -287,7 +390,7 @@ async function boot() {
   setInterval(() => {
     if (!state) return;
     applyProduction(state, Date.now());
-    renderResources();
+    renderMap();
     renderPanel();
   }, TICK_MS);
 }

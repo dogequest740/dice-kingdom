@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, getUpgradeCost, hasEnoughResources, spendResources } from "../../../shared/game-config.js";
+import { BUILDING_BY_ID, getUpgradeReadiness, spendResources } from "../../../shared/game-config.js";
 import { ApiError, assertMethod, json, sendError } from "../../../lib/api.js";
 import { getAuthUser } from "../../../lib/telegram-auth.js";
 import { applyProductionAndSync, getOrCreatePlayer, makeSnapshot, savePlayer } from "../../../lib/player-store.js";
@@ -16,17 +16,24 @@ export default async function handler(req, res) {
     let player = await getOrCreatePlayer(authUser);
     player = applyProductionAndSync(player);
 
-    const cost = getUpgradeCost(player.state, buildingId);
-    if (!hasEnoughResources(player.state, cost)) {
-      throw new ApiError(400, "Not enough resources", { cost });
+    const readiness = getUpgradeReadiness(player.state, buildingId);
+    if (readiness.ruleIssues.length > 0) {
+      throw new ApiError(400, readiness.ruleIssues[0], {
+        nextLevel: readiness.nextLevel,
+        ruleIssues: readiness.ruleIssues,
+      });
     }
 
-    spendResources(player.state, cost);
+    if (!readiness.canAfford) {
+      throw new ApiError(400, "Not enough resources", { cost: readiness.cost });
+    }
+
+    spendResources(player.state, readiness.cost);
     player.state.buildings[buildingId] = (player.state.buildings[buildingId] || 0) + 1;
     player.state.lastTick = Date.now();
 
     player = await savePlayer(player, authUser);
-    return json(res, 200, { ...makeSnapshot(player), spent: cost });
+    return json(res, 200, { ...makeSnapshot(player), spent: readiness.cost });
   } catch (error) {
     return sendError(res, error);
   }

@@ -1,97 +1,135 @@
 export const RESOURCE_META = {
-  wheat: { label: "Пшеница", icon: "🌾" },
-  wood: { label: "Дерево", icon: "🪵" },
-  stone: { label: "Камень", icon: "🧱" },
+  food: { label: "Food", icon: "🍖", capped: true },
+  wood: { label: "Wood", icon: "🪵", capped: true },
+  stone: { label: "Stone", icon: "🪨", capped: true },
+  crystals: { label: "Crystals", icon: "💎", capped: false },
 };
 
 export const BUILDINGS = [
   {
     id: "castle",
-    name: "Замок",
+    name: "Castle",
     icon: "🏰",
-    desc: "Центр города. Дает бонус к вместимости ресурсов.",
+    desc: "Main building. Unlocks higher upgrade levels for all buildings.",
     pos: { x: 50, y: 22 },
-    baseBuildCost: { wood: 220, stone: 200, wheat: 120 },
-    baseUpgradeCost: { wood: 160, stone: 170, wheat: 110 },
+    baseBuildCost: { wood: 500, stone: 400, food: 260 },
+    baseUpgradeCost: { wood: 180, stone: 165, food: 120 },
     capacityPerLevel: 180,
+    basePower: 40,
+    powerPerLevel: 18,
   },
   {
     id: "farm",
-    name: "Ферма",
+    name: "Farm",
     icon: "🌾",
-    desc: "Производит пшеницу каждую секунду.",
-    pos: { x: 74, y: 30 },
-    baseBuildCost: { wood: 90, wheat: 40 },
-    baseUpgradeCost: { wood: 70, wheat: 34 },
-    productionPerLevel: { wheat: 3.2 },
+    desc: "Generates food over time. Tap resource bubble to collect.",
+    pos: { x: 74, y: 32 },
+    baseBuildCost: { wood: 80, food: 60 },
+    baseUpgradeCost: { wood: 70, food: 48 },
+    productionPerLevel: { food: 2.4 },
+    basePower: 8,
+    powerPerLevel: 4,
   },
   {
     id: "sawmill",
-    name: "Лесопилка",
+    name: "Sawmill",
     icon: "🪵",
-    desc: "Производит дерево каждую секунду.",
-    pos: { x: 27, y: 36 },
-    baseBuildCost: { wood: 70, wheat: 55 },
-    baseUpgradeCost: { wood: 58, wheat: 48 },
-    productionPerLevel: { wood: 2.7 },
+    desc: "Generates wood over time. Tap resource bubble to collect.",
+    pos: { x: 27, y: 38 },
+    baseBuildCost: { food: 70, wood: 55 },
+    baseUpgradeCost: { food: 58, wood: 44 },
+    productionPerLevel: { wood: 2.1 },
+    basePower: 8,
+    powerPerLevel: 4,
   },
   {
     id: "quarry",
-    name: "Каменоломня",
-    icon: "🧱",
-    desc: "Производит камень каждую секунду.",
+    name: "Quarry",
+    icon: "🪨",
+    desc: "Generates stone over time. Tap resource bubble to collect.",
     pos: { x: 67, y: 52 },
-    baseBuildCost: { wood: 120, wheat: 70, stone: 35 },
-    baseUpgradeCost: { wood: 105, wheat: 64, stone: 45 },
-    productionPerLevel: { stone: 2.2 },
+    baseBuildCost: { wood: 120, food: 70, stone: 35 },
+    baseUpgradeCost: { wood: 95, food: 64, stone: 48 },
+    productionPerLevel: { stone: 1.7 },
+    basePower: 10,
+    powerPerLevel: 5,
   },
   {
-    id: "warehouse",
-    name: "Хранилище",
+    id: "storage",
+    name: "Storage",
     icon: "📦",
-    desc: "Увеличивает лимит хранения всех ресурсов.",
-    pos: { x: 45, y: 51 },
-    baseBuildCost: { wood: 130, stone: 120, wheat: 80 },
-    baseUpgradeCost: { wood: 100, stone: 95, wheat: 65 },
+    desc: "Increases the storage limit for food, wood and stone.",
+    pos: { x: 46, y: 52 },
+    baseBuildCost: { wood: 120, stone: 110, food: 80 },
+    baseUpgradeCost: { wood: 92, stone: 86, food: 62 },
     capacityPerLevel: 420,
-  },
-  {
-    id: "range",
-    name: "Стрельбище",
-    icon: "🏹",
-    desc: "Военная постройка. Подготовка к боевому режиму.",
-    pos: { x: 35, y: 60 },
-    baseBuildCost: { wood: 140, stone: 70, wheat: 100 },
-    baseUpgradeCost: { wood: 115, stone: 56, wheat: 80 },
-  },
-  {
-    id: "scouts",
-    name: "Лагерь разведчиков",
-    icon: "⛺",
-    desc: "Разведка окрестностей. Подготовка к PvE-механикам.",
-    pos: { x: 20, y: 71 },
-    baseBuildCost: { wood: 95, wheat: 95 },
-    baseUpgradeCost: { wood: 76, wheat: 78 },
+    basePower: 6,
+    powerPerLevel: 3,
   },
 ];
 
 export const BUILDING_BY_ID = Object.fromEntries(BUILDINGS.map((building) => [building.id, building]));
+export const PRODUCER_BUILDINGS = BUILDINGS.filter((building) => Boolean(building.productionPerLevel));
+export const CORE_BUILDING_IDS = BUILDINGS.map((building) => building.id);
 
 export function createDefaultState() {
   return {
-    resources: { wheat: 230, wood: 210, stone: 150 },
+    resources: { food: 120, wood: 90, stone: 65, crystals: 200 },
     buildings: {
       castle: 1,
-      farm: 1,
-      sawmill: 1,
+      farm: 0,
+      sawmill: 0,
       quarry: 0,
-      warehouse: 1,
-      range: 0,
-      scouts: 0,
+      storage: 0,
+    },
+    claimables: {
+      farm: 0,
+      sawmill: 0,
+      quarry: 0,
     },
     selected: "castle",
     lastTick: Date.now(),
   };
+}
+
+function toFinitePositiveNumber(value, fallback = 0) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) return fallback;
+  return parsed;
+}
+
+function normalizeResources(rawResources, baseResources) {
+  const resources = { ...baseResources, ...(rawResources || {}) };
+  if (Number.isFinite(rawResources?.wheat) && !Number.isFinite(rawResources?.food)) {
+    resources.food = Number(rawResources.wheat);
+  }
+
+  for (const id of Object.keys(baseResources)) {
+    resources[id] = toFinitePositiveNumber(resources[id], baseResources[id]);
+  }
+  return resources;
+}
+
+function normalizeBuildings(rawBuildings, baseBuildings) {
+  const buildings = { ...baseBuildings, ...(rawBuildings || {}) };
+  if (Number.isFinite(rawBuildings?.warehouse) && !Number.isFinite(rawBuildings?.storage)) {
+    buildings.storage = Number(rawBuildings.warehouse);
+  }
+
+  const normalized = {};
+  for (const id of Object.keys(baseBuildings)) {
+    normalized[id] = Math.floor(toFinitePositiveNumber(buildings[id], baseBuildings[id]));
+  }
+  return normalized;
+}
+
+function normalizeClaimables(rawClaimables, baseClaimables) {
+  const claimables = { ...baseClaimables, ...(rawClaimables || {}) };
+  const normalized = {};
+  for (const id of Object.keys(baseClaimables)) {
+    normalized[id] = toFinitePositiveNumber(claimables[id], baseClaimables[id]);
+  }
+  return normalized;
 }
 
 export function sanitizeState(raw) {
@@ -100,24 +138,41 @@ export function sanitizeState(raw) {
 
   const selected = raw.selected && BUILDING_BY_ID[raw.selected] ? raw.selected : base.selected;
   const lastTick = Number.isFinite(raw.lastTick) ? raw.lastTick : Date.now();
-  const resources = { ...base.resources, ...(raw.resources || {}) };
-  const buildings = { ...base.buildings, ...(raw.buildings || {}) };
+  const resources = normalizeResources(raw.resources, base.resources);
+  const buildings = normalizeBuildings(raw.buildings, base.buildings);
+  const claimables = normalizeClaimables(raw.claimables, base.claimables);
 
-  for (const id of Object.keys(resources)) {
-    const value = Number(resources[id]);
-    resources[id] = Number.isFinite(value) && value >= 0 ? value : 0;
-  }
-
-  for (const id of Object.keys(buildings)) {
-    const value = Number(buildings[id]);
-    buildings[id] = Number.isFinite(value) && value >= 0 ? Math.floor(value) : 0;
-  }
-
-  return { resources, buildings, selected, lastTick };
+  return { resources, buildings, claimables, selected, lastTick };
 }
 
 export function getLevel(state, buildingId) {
   return Math.max(0, Math.floor(state.buildings?.[buildingId] || 0));
+}
+
+export function getPower(state) {
+  let power = 0;
+  for (const building of BUILDINGS) {
+    const level = getLevel(state, building.id);
+    if (level <= 0) continue;
+    power += (building.basePower || 0) + Math.max(0, level - 1) * (building.powerPerLevel || 0);
+  }
+  return Math.floor(power);
+}
+
+export function getCharacterLevel(state) {
+  const power = getPower(state);
+  return 1 + Math.floor(power / 30);
+}
+
+export function getCapacity(state) {
+  let capacity = 320;
+  for (const building of BUILDINGS) {
+    const level = getLevel(state, building.id);
+    if (level > 0 && building.capacityPerLevel) {
+      capacity += building.capacityPerLevel * level;
+    }
+  }
+  return capacity;
 }
 
 export function getUpgradeCost(state, buildingId) {
@@ -125,11 +180,10 @@ export function getUpgradeCost(state, buildingId) {
   if (!building) throw new Error(`Unknown building "${buildingId}"`);
   const level = getLevel(state, buildingId);
   const baseCost = level === 0 ? building.baseBuildCost : building.baseUpgradeCost || building.baseBuildCost;
-  const multiplier = level === 0 ? 1 : Math.pow(1.55, level - 1);
+  const multiplier = level === 0 ? 1 : Math.pow(1.52, level - 1);
   const cost = {};
-
   for (const [resource, amount] of Object.entries(baseCost)) {
-    cost[resource] = Math.floor(amount * multiplier);
+    cost[resource] = Math.max(1, Math.floor(amount * multiplier));
   }
   return cost;
 }
@@ -144,22 +198,60 @@ export function spendResources(state, cost) {
   }
 }
 
-export function getCapacity(state) {
-  let capacity = 500;
-  for (const building of BUILDINGS) {
-    const level = getLevel(state, building.id);
-    if (level > 0 && building.capacityPerLevel) {
-      capacity += building.capacityPerLevel * level;
-    }
+function getCastleRuleIssues(state, targetLevel) {
+  const issues = [];
+  const requiredOtherLevel = Math.max(1, targetLevel - 1);
+  const lowBuildings = BUILDINGS.filter((building) => building.id !== "castle").filter(
+    (building) => getLevel(state, building.id) < requiredOtherLevel
+  );
+
+  if (lowBuildings.length > 0) {
+    const names = lowBuildings.map((building) => building.name).join(", ");
+    issues.push(`Requires ${names} at level ${requiredOtherLevel}+`);
   }
-  return capacity;
+
+  const minCharacterLevel = targetLevel + 1;
+  const currentCharacterLevel = getCharacterLevel(state);
+  if (currentCharacterLevel < minCharacterLevel) {
+    issues.push(`Requires character level ${minCharacterLevel}`);
+  }
+  return issues;
+}
+
+function getGenericRuleIssues(state, buildingId, targetLevel) {
+  if (buildingId === "castle") return getCastleRuleIssues(state, targetLevel);
+
+  const castleLevel = getLevel(state, "castle");
+  if (targetLevel > castleLevel) {
+    return [`Upgrade Castle to level ${targetLevel} first`];
+  }
+  return [];
+}
+
+export function getUpgradeReadiness(state, buildingId) {
+  const nextLevel = getLevel(state, buildingId) + 1;
+  const cost = getUpgradeCost(state, buildingId);
+  const canAfford = hasEnoughResources(state, cost);
+  const ruleIssues = getGenericRuleIssues(state, buildingId, nextLevel);
+
+  return {
+    cost,
+    nextLevel,
+    canAfford,
+    ruleIssues,
+    canUpgrade: canAfford && ruleIssues.length === 0,
+  };
+}
+
+function isCappedResource(resource) {
+  return RESOURCE_META[resource]?.capped === true;
 }
 
 export function getProductionPerSec(state) {
-  const total = { wheat: 0, wood: 0, stone: 0 };
-  for (const building of BUILDINGS) {
+  const total = { food: 0, wood: 0, stone: 0, crystals: 0 };
+  for (const building of PRODUCER_BUILDINGS) {
     const level = getLevel(state, building.id);
-    if (level <= 0 || !building.productionPerLevel) continue;
+    if (level <= 0) continue;
     for (const [resource, amount] of Object.entries(building.productionPerLevel)) {
       total[resource] += amount * level;
     }
@@ -171,27 +263,86 @@ export function applyProduction(state, nowTs = Date.now()) {
   const elapsed = Math.floor((nowTs - state.lastTick) / 1000);
   if (elapsed <= 0) return false;
 
-  const capacity = getCapacity(state);
-  const rates = getProductionPerSec(state);
-
-  for (const resource of Object.keys(RESOURCE_META)) {
-    const current = Number(state.resources[resource] || 0);
-    const nextValue = current + rates[resource] * elapsed;
-    state.resources[resource] = Math.min(capacity, nextValue);
+  for (const building of PRODUCER_BUILDINGS) {
+    const level = getLevel(state, building.id);
+    if (level <= 0) continue;
+    for (const amount of Object.values(building.productionPerLevel)) {
+      state.claimables[building.id] = toFinitePositiveNumber(state.claimables[building.id], 0) + amount * level * elapsed;
+    }
   }
 
   state.lastTick += elapsed * 1000;
   return true;
 }
 
+export function getClaimableForBuilding(state, buildingId) {
+  const building = BUILDING_BY_ID[buildingId];
+  if (!building || !building.productionPerLevel) return null;
+  const level = getLevel(state, building.id);
+  if (level <= 0) return null;
+
+  const storedRaw = toFinitePositiveNumber(state.claimables?.[buildingId], 0);
+  const available = Math.floor(storedRaw);
+  if (available <= 0) return null;
+
+  const [resource] = Object.keys(building.productionPerLevel);
+  let collectible = available;
+  if (isCappedResource(resource)) {
+    const capacity = getCapacity(state);
+    const freeSpace = Math.max(0, capacity - toFinitePositiveNumber(state.resources[resource], 0));
+    collectible = Math.min(collectible, freeSpace);
+  }
+
+  return {
+    resource,
+    available,
+    collectible: Math.max(0, Math.floor(collectible)),
+    storedRaw,
+  };
+}
+
+export function getCollectables(state) {
+  const collectables = {};
+  for (const building of PRODUCER_BUILDINGS) {
+    const info = getClaimableForBuilding(state, building.id);
+    if (info && info.collectible > 0) {
+      collectables[building.id] = info;
+    }
+  }
+  return collectables;
+}
+
+export function collectFromBuilding(state, buildingId) {
+  const info = getClaimableForBuilding(state, buildingId);
+  if (!info) {
+    return { collected: {}, collectedTotal: 0, reason: "nothing_to_collect" };
+  }
+
+  if (info.collectible <= 0) {
+    return { collected: {}, collectedTotal: 0, reason: "storage_full" };
+  }
+
+  const collected = { [info.resource]: info.collectible };
+  state.resources[info.resource] = toFinitePositiveNumber(state.resources[info.resource], 0) + info.collectible;
+  state.claimables[buildingId] = Math.max(0, toFinitePositiveNumber(state.claimables[buildingId], 0) - info.collectible);
+
+  return {
+    collected,
+    collectedTotal: info.collectible,
+    reason: null,
+  };
+}
+
 export function toClientState(state) {
   return {
     resources: {
-      wheat: Number(state.resources.wheat || 0),
+      food: Number(state.resources.food || 0),
       wood: Number(state.resources.wood || 0),
       stone: Number(state.resources.stone || 0),
+      crystals: Number(state.resources.crystals || 0),
     },
     buildings: { ...state.buildings },
+    claimables: { ...state.claimables },
     selected: state.selected,
     lastTick: state.lastTick,
   };
