@@ -135,7 +135,7 @@ export const BUILDINGS = [
     icon: "🌾",
     desc: "Generates food over time. Tap bubble to collect.",
     pos: { x: 74, y: 32 },
-    baseBuildCost: { wood: 80, food: 60 },
+    baseBuildCost: { food: 60, wood: 40, stone: 0, crystals: 0 },
     baseUpgradeCost: { wood: 70, food: 48 },
     productionPerLevel: { food: 2.4 },
   },
@@ -145,7 +145,7 @@ export const BUILDINGS = [
     icon: "🪵",
     desc: "Generates wood over time. Tap bubble to collect.",
     pos: { x: 27, y: 38 },
-    baseBuildCost: { food: 70, wood: 55 },
+    baseBuildCost: { food: 55, wood: 30, stone: 0, crystals: 0 },
     baseUpgradeCost: { food: 58, wood: 44 },
     productionPerLevel: { wood: 2.1 },
   },
@@ -155,7 +155,7 @@ export const BUILDINGS = [
     icon: "🪨",
     desc: "Generates stone over time. Tap bubble to collect.",
     pos: { x: 67, y: 52 },
-    baseBuildCost: { wood: 120, food: 70, stone: 35 },
+    baseBuildCost: { food: 90, wood: 70, stone: 0, crystals: 0 },
     baseUpgradeCost: { wood: 95, food: 64, stone: 48 },
     productionPerLevel: { stone: 1.7 },
   },
@@ -165,7 +165,7 @@ export const BUILDINGS = [
     icon: "📦",
     desc: "Increases storage capacity for food, wood and stone.",
     pos: { x: 46, y: 52 },
-    baseBuildCost: { wood: 120, stone: 110, food: 80 },
+    baseBuildCost: { food: 80, wood: 70, stone: 0, crystals: 0 },
     baseUpgradeCost: { wood: 92, stone: 86, food: 62 },
     capacityPerLevel: 420,
     productionPerLevel: null,
@@ -417,6 +417,18 @@ function getCastleRuleIssues(state, targetLevel) {
 
 function getNonCastleRuleIssues(state, buildingId, targetLevel) {
   const issues = [];
+  if (targetLevel === 1) {
+    if (buildingId === "sawmill" && getLevel(state, "farm") < 1) {
+      issues.push("Requires Farm Lv.1");
+    }
+    if (buildingId === "quarry" && getLevel(state, "sawmill") < 1) {
+      issues.push("Requires Sawmill Lv.1");
+    }
+    if (buildingId === "storage" && getLevel(state, "farm") < 1) {
+      issues.push("Requires Farm Lv.1");
+    }
+  }
+
   const castleLevel = getLevel(state, "castle");
   if (targetLevel > castleLevel) {
     issues.push(`Upgrade Castle to Lv.${targetLevel} first`);
