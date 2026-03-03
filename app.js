@@ -15,6 +15,29 @@ import {
 
 const TICK_MS = 1000;
 const RESOURCE_ORDER = ["food", "wood", "stone", "crystals"];
+const BUILDING_SPRITES = {
+  castle: [
+    { minLevel: 1, src: "./assets/tileset/buildings/house-hay-3.png", width: 175, height: 128 },
+    { minLevel: 20, src: "./assets/tileset/buildings/house-hay-4-purple.png", width: 128, height: 128 },
+  ],
+  farm: [
+    { minLevel: 1, src: "./assets/tileset/buildings/well-hay-1.png", width: 56, height: 74 },
+    { minLevel: 4, src: "./assets/tileset/buildings/house-hay-1.png", width: 89, height: 91 },
+    { minLevel: 12, src: "./assets/tileset/buildings/house-hay-2.png", width: 157, height: 112 },
+  ],
+  sawmill: [
+    { minLevel: 1, src: "./assets/tileset/buildings/house-hay-1.png", width: 89, height: 91 },
+    { minLevel: 10, src: "./assets/tileset/buildings/house-hay-2.png", width: 157, height: 112 },
+  ],
+  quarry: [
+    { minLevel: 1, src: "./assets/tileset/buildings/citywall-gate-1.png", width: 80, height: 96 },
+    { minLevel: 16, src: "./assets/tileset/buildings/house-hay-3.png", width: 175, height: 128 },
+  ],
+  storage: [
+    { minLevel: 1, src: "./assets/tileset/buildings/house-hay-2.png", width: 157, height: 112 },
+    { minLevel: 18, src: "./assets/tileset/buildings/house-hay-4-purple.png", width: 128, height: 128 },
+  ],
+};
 
 const mapEl = document.getElementById("map");
 const panelEl = document.getElementById("buildingPanel");
@@ -55,6 +78,21 @@ function formatDuration(totalSec) {
   if (hours > 0) return `${hours}h ${minutes}m`;
   if (minutes > 0) return `${minutes}m ${seconds}s`;
   return `${seconds}s`;
+}
+
+function getBuildingSprite(buildingId, level) {
+  const variants = BUILDING_SPRITES[buildingId];
+  if (!variants || variants.length === 0 || level <= 0) return null;
+
+  let selected = variants[0];
+  for (const variant of variants) {
+    if (level >= variant.minLevel) {
+      selected = variant;
+    } else {
+      break;
+    }
+  }
+  return selected;
 }
 
 function setStatus(message, isError = false) {
@@ -266,7 +304,7 @@ function renderMap() {
     const nodeRefs = mapNodes.get(building.id);
     if (!nodeRefs) continue;
 
-    const { buildingButton, collectButton, timerLabel } = nodeRefs;
+    const { buildingButton, collectButton, timerLabel, badgeEl, spriteEl, placeholderEl } = nodeRefs;
     const level = getLevel(state, building.id);
     const built = level > 0;
     const upgradingThis = activeUpgrade && activeUpgrade.buildingId === building.id;
@@ -274,9 +312,24 @@ function renderMap() {
     buildingButton.dataset.built = String(built);
     buildingButton.classList.toggle("selected", panelBuildingId === building.id);
 
-    const iconEl = buildingButton.querySelector(".building-icon");
-    const badgeEl = buildingButton.querySelector(".building-badge");
-    iconEl.textContent = built ? building.icon : "🏗️";
+    const sprite = getBuildingSprite(building.id, level);
+    if (built && sprite) {
+      spriteEl.src = sprite.src;
+      spriteEl.width = sprite.width;
+      spriteEl.height = sprite.height;
+      spriteEl.alt = `${building.name} level ${level}`;
+      spriteEl.classList.remove("hidden");
+      placeholderEl.classList.add("hidden");
+    } else {
+      spriteEl.removeAttribute("src");
+      spriteEl.removeAttribute("width");
+      spriteEl.removeAttribute("height");
+      spriteEl.alt = "";
+      spriteEl.classList.add("hidden");
+      placeholderEl.textContent = built ? building.icon : "🏗️";
+      placeholderEl.classList.remove("hidden");
+    }
+
     badgeEl.textContent = built ? `${building.name} Lv.${level}` : `Build ${building.name}`;
 
     if (upgradingThis) {
@@ -322,6 +375,9 @@ function buildMapNodes() {
     const buildingButton = node.querySelector(".building");
     const collectButton = node.querySelector(".collect-btn");
     const timerLabel = node.querySelector(".upgrade-timer");
+    const badgeEl = node.querySelector(".building-badge");
+    const spriteEl = node.querySelector(".building-sprite");
+    const placeholderEl = node.querySelector(".building-placeholder");
 
     buildingButton.addEventListener("click", async () => {
       if (!state) return;
@@ -340,7 +396,7 @@ function buildMapNodes() {
       await onCollect(building.id);
     });
 
-    mapNodes.set(building.id, { node, buildingButton, collectButton, timerLabel });
+    mapNodes.set(building.id, { node, buildingButton, collectButton, timerLabel, badgeEl, spriteEl, placeholderEl });
     mapEl.appendChild(node);
   }
 }

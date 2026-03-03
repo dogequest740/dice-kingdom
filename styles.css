@@ -90,14 +90,30 @@ button {
 }
 
 .hero-avatar {
-  width: 34px;
-  height: 34px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(180deg, #fff5ce, #f3c23f);
-  font-size: 20px;
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 30% 20%, #fff6d4, #d4a22c 72%);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.hero-avatar::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 4px;
+  width: 32px;
+  height: 48px;
+  transform: translateX(-50%) scale(0.95);
+  transform-origin: top center;
+  background-image: url("./assets/tileset/characters/character-idle.png");
+  background-size: 160px 192px;
+  background-position: 0 -144px;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
 }
 
 .hero-meta {
@@ -127,21 +143,21 @@ button {
   position: absolute;
   inset: 0 0 80px 0;
   background:
-    radial-gradient(circle at 20% 88%, rgba(34, 97, 151, 0.2) 0 9%, transparent 10%),
-    radial-gradient(circle at 70% 14%, rgba(255, 255, 255, 0.18) 0 18%, transparent 19%),
-    linear-gradient(160deg, rgba(255, 244, 190, 0.8) 0 10%, transparent 10% 100%),
-    linear-gradient(35deg, transparent 0 15%, rgba(255, 240, 180, 0.68) 15% 22%, transparent 22% 100%),
-    linear-gradient(180deg, #9fdc88 0%, #77c768 60%, #64b45a 100%);
+    linear-gradient(180deg, rgba(15, 25, 38, 0.12), rgba(15, 25, 38, 0.32)),
+    url("./assets/tileset/map/beginning-fields.png");
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-size: cover;
 }
 
 .building-node {
   position: absolute;
-  width: 112px;
+  width: 152px;
   transform: translate(-50%, -50%);
 }
 
 .building {
-  width: 112px;
+  width: 152px;
   background: transparent;
   border: 0;
   padding: 0;
@@ -149,33 +165,68 @@ button {
 }
 
 .building-icon {
-  width: 92px;
-  height: 72px;
+  position: relative;
+  width: 136px;
+  height: 108px;
   margin: 0 auto;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.building-icon::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  width: 72px;
+  height: 14px;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.3);
+  filter: blur(2px);
+}
+
+.building-sprite {
+  position: relative;
+  z-index: 1;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.22));
+}
+
+.building-sprite.hidden {
+  display: none;
+}
+
+.building-placeholder {
+  position: relative;
+  z-index: 1;
+  width: 86px;
+  height: 70px;
+  border-radius: 14px;
+  border: 2px dashed rgba(255, 255, 255, 0.45);
+  background: rgba(48, 56, 70, 0.55);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 36px;
-  border-radius: 16px;
-  background: linear-gradient(180deg, #e5e7eb, #aeb8c7);
-  border: 2px solid rgba(255, 255, 255, 0.55);
-  box-shadow:
-    0 7px 16px rgba(0, 0, 0, 0.25),
-    inset 0 0 0 2px rgba(0, 0, 0, 0.08);
+  font-size: 34px;
 }
 
-.building[data-built="false"] .building-icon {
-  background: repeating-linear-gradient(
-    45deg,
-    rgba(200, 205, 215, 0.78),
-    rgba(200, 205, 215, 0.78) 10px,
-    rgba(160, 170, 186, 0.82) 10px,
-    rgba(160, 170, 186, 0.82) 20px
-  );
-  border-color: rgba(255, 255, 255, 0.35);
+.building-placeholder.hidden {
+  display: none;
 }
 
-.building.selected .building-icon {
+.building[data-built="false"] .building-icon::after {
+  display: none;
+}
+
+.building.selected .building-sprite,
+.building.selected .building-placeholder {
   outline: 3px solid var(--accent);
   outline-offset: 2px;
 }
@@ -193,8 +244,8 @@ button {
 
 .collect-btn {
   position: absolute;
-  left: 62px;
-  top: -22px;
+  left: 50%;
+  top: -20px;
   transform: translateX(-50%);
   border: 0;
   border-radius: 999px;
@@ -208,8 +259,8 @@ button {
 
 .upgrade-timer {
   position: absolute;
-  left: 56px;
-  top: -26px;
+  left: 50%;
+  top: -24px;
   transform: translateX(-50%);
   border-radius: 999px;
   padding: 4px 9px;
@@ -360,25 +411,29 @@ button {
   }
 
   .hero-avatar {
-    width: 30px;
-    height: 30px;
-    font-size: 18px;
+    width: 34px;
+    height: 34px;
+  }
+
+  .hero-avatar::before {
+    top: 2px;
+    transform: translateX(-50%) scale(0.82);
+  }
+
+  .building-node {
+    width: 132px;
   }
 
   .building {
-    width: 102px;
+    width: 132px;
   }
 
   .building-icon {
-    width: 84px;
-    height: 66px;
+    width: 118px;
+    height: 96px;
   }
 
   .building-badge {
     font-size: 12px;
-  }
-
-  .collect-btn {
-    left: 57px;
   }
 }
