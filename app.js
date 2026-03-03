@@ -23,6 +23,7 @@ const panelProductionEl = document.getElementById("panelProduction");
 const panelCostEl = document.getElementById("panelCost");
 const panelRulesEl = document.getElementById("panelRules");
 const panelActionEl = document.getElementById("panelAction");
+const panelCloseEl = document.getElementById("panelClose");
 const statusLineEl = document.getElementById("statusLine");
 const heroLevelEl = document.getElementById("heroLevel");
 const heroPowerEl = document.getElementById("heroPower");
@@ -35,6 +36,7 @@ let state = null;
 let requestInFlight = false;
 let initData = "";
 let devAuth = null;
+let panelBuildingId = null;
 
 function formatNumber(value) {
   return Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(Math.floor(value));
@@ -128,12 +130,12 @@ function formatRate(value) {
 }
 
 function renderPanel() {
-  if (!state) {
+  if (!state || !panelBuildingId) {
     panelEl.classList.add("hidden");
     return;
   }
 
-  const building = BUILDING_BY_ID[state.selected];
+  const building = BUILDING_BY_ID[panelBuildingId];
   if (!building) {
     panelEl.classList.add("hidden");
     return;
@@ -240,7 +242,7 @@ function renderMap() {
     const level = getLevel(state, building.id);
     const built = level > 0;
     buildingButton.dataset.built = String(built);
-    buildingButton.classList.toggle("selected", state.selected === building.id);
+    buildingButton.classList.toggle("selected", panelBuildingId === building.id);
 
     const iconEl = buildingButton.querySelector(".building-icon");
     const badgeEl = buildingButton.querySelector(".building-badge");
@@ -285,6 +287,7 @@ function buildMapNodes() {
     buildingButton.addEventListener("click", async () => {
       if (!state) return;
       state.selected = building.id;
+      panelBuildingId = building.id;
       render();
       try {
         await api("/api/state/select-building", { body: { buildingId: building.id } });
@@ -359,6 +362,10 @@ async function onCollect(buildingId) {
 
 function setupEvents() {
   panelActionEl.addEventListener("click", onUpgrade);
+  panelCloseEl.addEventListener("click", () => {
+    panelBuildingId = null;
+    render();
+  });
   closeBtnEl.addEventListener("click", () => {
     const tg = window.Telegram?.WebApp;
     if (tg) {
@@ -378,6 +385,8 @@ async function boot() {
 
   try {
     await loadSession();
+    panelBuildingId = null;
+    renderPanel();
   } catch (error) {
     if (String(error.message).includes("Unauthorized")) {
       setStatus("Open this Mini App from Telegram. Dev mode: ?devUserId=1", true);
@@ -389,7 +398,9 @@ async function boot() {
 
   setInterval(() => {
     if (!state) return;
+    const resourcesBefore = { ...state.resources };
     applyProduction(state, Date.now());
+    state.resources = resourcesBefore;
     renderMap();
     renderPanel();
   }, TICK_MS);

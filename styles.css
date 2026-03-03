@@ -232,6 +232,12 @@ button {
   gap: 8px;
 }
 
+.panel-head-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .panel-head h2 {
   margin: 0;
   font-size: 20px;
@@ -240,6 +246,16 @@ button {
 .panel-head span {
   font-size: 14px;
   opacity: 0.86;
+}
+
+.panel-close {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 999px;
+  font-size: 13px;
+  line-height: 1;
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .panel p {
