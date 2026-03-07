@@ -21,22 +21,22 @@ const RESOURCE_ICONS = {
   stone: "./assets/custom/resource-stone.png",
   crystals: "./assets/custom/resource-crystals.png",
 };
-const CONSTRUCTION_SPRITE = { src: "./assets/custom/construction.png", width: 118, height: 118 };
+const CONSTRUCTION_SPRITE = { src: "./assets/custom/construction.png", width: 84, height: 84 };
 const BUILDING_SPRITES = {
   castle: [
-    { minLevel: 1, src: "./assets/custom/castle.png", width: 162, height: 162 },
+    { minLevel: 1, src: "./assets/custom/castle.png", width: 114, height: 114 },
   ],
   farm: [
-    { minLevel: 1, src: "./assets/custom/farm.png", width: 118, height: 118 },
+    { minLevel: 1, src: "./assets/custom/farm.png", width: 84, height: 84 },
   ],
   sawmill: [
-    { minLevel: 1, src: "./assets/custom/sawmill.png", width: 118, height: 118 },
+    { minLevel: 1, src: "./assets/custom/sawmill.png", width: 84, height: 84 },
   ],
   quarry: [
-    { minLevel: 1, src: "./assets/custom/quarry.png", width: 118, height: 118 },
+    { minLevel: 1, src: "./assets/custom/quarry.png", width: 84, height: 84 },
   ],
   storage: [
-    { minLevel: 1, src: "./assets/custom/storage.png", width: 140, height: 140 },
+    { minLevel: 1, src: "./assets/custom/storage.png", width: 98, height: 98 },
   ],
 };
 
@@ -54,7 +54,7 @@ const statusLineEl = document.getElementById("statusLine");
 const heroLevelEl = document.getElementById("heroLevel");
 const heroPowerEl = document.getElementById("heroPower");
 const resourceBarEl = document.getElementById("resourceBar");
-const closeBtnEl = document.querySelector(".close-btn");
+const collectAllBtnEl = document.getElementById("collectAllBtn");
 const template = document.getElementById("buildingTemplate");
 
 const mapNodes = new Map();
@@ -151,6 +151,22 @@ function createResourceStatChip(resource, text, warn = false) {
   return chip;
 }
 
+function getCollectTargets() {
+  const targets = [];
+  let total = 0;
+
+  if (!state) return { targets, total };
+
+  for (const building of BUILDINGS) {
+    const claimable = getClaimableForBuilding(state, building.id);
+    if (claimable && claimable.collectible > 0) {
+      targets.push({ buildingId: building.id, claimable });
+      total += claimable.collectible;
+    }
+  }
+  return { targets, total };
+}
+
 function setStatus(message, isError = false) {
   statusLineEl.textContent = message || "";
   statusLineEl.classList.toggle("error", Boolean(isError));
@@ -243,6 +259,13 @@ function renderHero() {
   if (!state) return;
   heroLevelEl.textContent = `Lv. ${getCharacterLevel(state)}`;
   heroPowerEl.textContent = `Power ${formatNumber(getPower(state))}`;
+}
+
+function renderCollectAllButton() {
+  if (!collectAllBtnEl) return;
+  const { targets, total } = getCollectTargets();
+  collectAllBtnEl.disabled = requestInFlight || targets.length === 0;
+  collectAllBtnEl.textContent = targets.length > 0 ? `Collect All ${formatNumber(total)}` : "Collect All";
 }
 
 function renderPanel() {
@@ -423,6 +446,7 @@ function render() {
   renderResources();
   renderHero();
   renderMap();
+  renderCollectAllButton();
   renderPanel();
 }
 
@@ -439,6 +463,7 @@ function buildMapNodes() {
     const node = template.content.firstElementChild.cloneNode(true);
     node.style.setProperty("--node-x", `${building.pos.x}%`);
     node.style.setProperty("--node-y", `${building.pos.y}%`);
+    node.style.zIndex = String(100 + Math.round(building.pos.y * 10));
 
     const buildingButton = node.querySelector(".building");
     const collectButton = node.querySelector(".collect-btn");
@@ -526,19 +551,51 @@ async function onCollect(buildingId) {
   }
 }
 
+async function onCollectAll() {
+  if (requestInFlight || !state) return;
+
+  const { targets } = getCollectTargets();
+  if (targets.length === 0) {
+    setStatus("No resources to collect");
+    return;
+  }
+
+  requestInFlight = true;
+  render();
+  setStatus("Collecting all resources...");
+
+  const totals = { food: 0, wood: 0, stone: 0, crystals: 0 };
+
+  try {
+    for (const target of targets) {
+      const snapshot = await api(`/api/buildings/${target.buildingId}/collect`, { body: {} });
+      setStateFromSnapshot(snapshot);
+      for (const [resource, amount] of Object.entries(snapshot.collected || {})) {
+        totals[resource] = (totals[resource] || 0) + Number(amount || 0);
+      }
+    }
+
+    const summary = Object.entries(totals)
+      .filter(([, amount]) => amount > 0)
+      .map(([resource, amount]) => `${RESOURCE_META[resource].label} +${formatNumber(amount)}`)
+      .join(", ");
+
+    setStatus(summary ? `Collected: ${summary}` : "Nothing collected");
+    window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred("success");
+  } catch (error) {
+    setStatus(error.message, true);
+  } finally {
+    requestInFlight = false;
+    render();
+  }
+}
+
 function setupEvents() {
   panelActionEl.addEventListener("click", onUpgrade);
+  collectAllBtnEl?.addEventListener("click", onCollectAll);
   panelCloseEl.addEventListener("click", () => {
     panelBuildingId = null;
     render();
-  });
-  closeBtnEl.addEventListener("click", () => {
-    const tg = window.Telegram?.WebApp;
-    if (tg) {
-      tg.close();
-      return;
-    }
-    panelEl.classList.toggle("hidden");
   });
 }
 

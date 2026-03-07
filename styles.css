@@ -39,19 +39,11 @@ button {
 .topbar {
   position: absolute;
   inset: 0 0 auto 0;
-  z-index: 20;
+  z-index: 3200;
   display: flex;
   align-items: flex-start;
   gap: 8px;
   padding: 10px 10px 0;
-}
-
-.close-btn {
-  border: 0;
-  border-radius: 999px;
-  padding: 7px 12px;
-  background: rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(2px);
 }
 
 .hud-right {
@@ -60,7 +52,7 @@ button {
   flex-direction: column;
   align-items: flex-end;
   gap: 6px;
-  max-width: calc(100% - 90px);
+  max-width: calc(100% - 150px);
 }
 
 .resources {
@@ -254,20 +246,29 @@ button {
 
 .building-badge {
   position: relative;
-  z-index: 30;
+  z-index: 8;
   display: inline-flex;
+  justify-content: center;
   margin-top: 4px;
   padding: 4px 9px;
   border-radius: 999px;
-  background: rgba(23, 30, 40, 0.76);
+  background: rgba(23, 30, 40, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(2px);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75);
   font-size: 13px;
   min-height: 24px;
   align-items: center;
+  max-width: calc(var(--node-size) - 10px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
 }
 
 .collect-btn {
   position: absolute;
-  z-index: 40;
+  z-index: 10;
   left: 50%;
   top: -24px;
   transform: translateX(-50%);
@@ -283,7 +284,7 @@ button {
 
 .upgrade-timer {
   position: absolute;
-  z-index: 40;
+  z-index: 10;
   left: 50%;
   top: -28px;
   transform: translateX(-50%);
@@ -307,7 +308,7 @@ button {
 
 .panel {
   position: absolute;
-  z-index: 25;
+  z-index: 3600;
   inset: auto 8px 88px 8px;
   border-radius: 16px;
   background: var(--panel-soft);
@@ -419,7 +420,7 @@ button {
 
 .bottom-nav {
   position: absolute;
-  z-index: 30;
+  z-index: 3400;
   left: 0;
   right: 0;
   bottom: 0;
@@ -427,6 +428,27 @@ button {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   background: rgba(35, 42, 61, 0.95);
+}
+
+.collect-all-btn {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 88px;
+  z-index: 3500;
+  border: 0;
+  border-radius: 12px;
+  padding: 11px 12px;
+  background: linear-gradient(180deg, #2d86ff, #2b66ce);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
+}
+
+.collect-all-btn:disabled {
+  background: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.65);
+  box-shadow: none;
 }
 
 .tab {
@@ -443,6 +465,15 @@ button {
 }
 
 @media (max-width: 420px) {
+  .topbar {
+    gap: 6px;
+    padding: 8px 8px 0;
+  }
+
+  .hud-right {
+    max-width: calc(100% - 128px);
+  }
+
   .resource-chip {
     font-size: 11px;
     padding: 3px 7px 3px 5px;
@@ -469,5 +500,13 @@ button {
 
   .building-badge {
     font-size: 12px;
+  }
+
+  .collect-all-btn {
+    left: 8px;
+    right: 8px;
+    bottom: 84px;
+    padding: 10px 10px;
+    font-size: 13px;
   }
 }
