@@ -21,22 +21,22 @@ const RESOURCE_ICONS = {
   stone: "./assets/custom/resource-stone.png",
   crystals: "./assets/custom/resource-crystals.png",
 };
-const CONSTRUCTION_SPRITE = { src: "./assets/custom/construction.png", width: 168, height: 142, offsetY: 10 };
+const CONSTRUCTION_SPRITE = { src: "./assets/custom/construction.png", width: 170, height: 170 };
 const BUILDING_SPRITES = {
   castle: [
-    { minLevel: 1, src: "./assets/custom/castle.png", width: 220, height: 246, offsetY: 10 },
+    { minLevel: 1, src: "./assets/custom/castle.png", width: 230, height: 230 },
   ],
   farm: [
-    { minLevel: 1, src: "./assets/custom/farm.png", width: 210, height: 160, offsetY: 8 },
+    { minLevel: 1, src: "./assets/custom/farm.png", width: 170, height: 170 },
   ],
   sawmill: [
-    { minLevel: 1, src: "./assets/custom/sawmill.png", width: 188, height: 188, offsetY: 9 },
+    { minLevel: 1, src: "./assets/custom/sawmill.png", width: 170, height: 170 },
   ],
   quarry: [
-    { minLevel: 1, src: "./assets/custom/construction.png", width: 172, height: 146, offsetY: 10 },
+    { minLevel: 1, src: "./assets/custom/quarry.png", width: 170, height: 170 },
   ],
   storage: [
-    { minLevel: 1, src: "./assets/custom/storage.png", width: 178, height: 178, offsetY: 8 },
+    { minLevel: 1, src: "./assets/custom/storage.png", width: 200, height: 200 },
   ],
 };
 
@@ -337,7 +337,7 @@ function renderMap() {
       } else {
         spriteEl.removeAttribute("height");
       }
-      spriteEl.style.transform = sprite.offsetY ? `translateY(${sprite.offsetY}px)` : "";
+      spriteEl.style.transform = "";
       spriteEl.alt = `${building.name} level ${level}`;
       spriteEl.classList.remove("hidden");
       placeholderEl.classList.add("hidden");
