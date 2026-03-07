@@ -4,13 +4,17 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vercel dev",
-    "start": "vercel dev"
+    "build:ts": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "dev": "npm run build:ts && vercel dev",
+    "start": "npm run build:ts && vercel dev"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.8"
   },
   "devDependencies": {
+    "@types/node": "^22.15.30",
+    "typescript": "^5.8.3",
     "vercel": "^48.7.3"
   }
 }

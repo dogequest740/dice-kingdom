@@ -1,8 +1,8 @@
 # Telegram Mini App: Город (Vercel + Supabase)
 
 Проект переделан под serverless-архитектуру:
-- фронт на статических файлах (`index.html`, `app.js`, `styles.css`);
-- backend на Vercel Functions (`api/*`);
+- фронт на статических файлах (`index.html`, `app.js`, `styles.css`) из TypeScript-исходников;
+- backend на Vercel Functions (`api/*`) из TypeScript-исходников;
 - хранение прогресса в Supabase (`players.state` JSONB);
 - авторизация через Telegram WebApp `initData`.
 
@@ -64,6 +64,18 @@ npm run dev
 Для теста без Telegram:
 `http://localhost:3000/?devUserId=1&devUsername=test`
 
+Проверка типов:
+
+```powershell
+npm run typecheck
+```
+
+Ручная сборка TypeScript в `.js`:
+
+```powershell
+npm run build:ts
+```
+
 ## .env параметры
 
 - `TELEGRAM_BOT_TOKEN` - токен бота из BotFather.
@@ -85,5 +97,7 @@ npm run dev
 
 - `api/*` - Vercel Functions.
 - `lib/*` - auth/API/Supabase хелперы.
-- `shared/game-config.js` - единая игровая логика для клиента и backend.
-- `index.html`, `app.js`, `styles.css` - UI Mini App.
+- `*.ts` - исходники TypeScript.
+- `*.js` - собранные runtime-файлы для Vercel/браузера.
+- `shared/game-config.ts` - единая игровая логика для клиента и backend.
+- `index.html`, `app.ts`, `styles.css` - UI Mini App (выходной файл: `app.js`).

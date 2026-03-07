@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022", "DOM"],
+    "strict": false,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "/shared/*": ["shared/*"]
+    },
+    "resolveJsonModule": true,
+    "noEmitOnError": true
+  },
+  "include": ["app.ts", "api/**/*.ts", "lib/**/*.ts", "shared/**/*.ts", "types/**/*.d.ts"]
+}
