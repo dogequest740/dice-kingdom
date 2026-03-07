@@ -21,22 +21,22 @@ const RESOURCE_ICONS = {
   stone: "./assets/custom/resource-stone.png",
   crystals: "./assets/custom/resource-crystals.png",
 };
-const CONSTRUCTION_SPRITE = { src: "./assets/custom/construction.png", width: 170, height: 170 };
+const CONSTRUCTION_SPRITE = { src: "./assets/custom/construction.png", width: 118, height: 118 };
 const BUILDING_SPRITES = {
   castle: [
-    { minLevel: 1, src: "./assets/custom/castle.png", width: 230, height: 230 },
+    { minLevel: 1, src: "./assets/custom/castle.png", width: 162, height: 162 },
   ],
   farm: [
-    { minLevel: 1, src: "./assets/custom/farm.png", width: 170, height: 170 },
+    { minLevel: 1, src: "./assets/custom/farm.png", width: 118, height: 118 },
   ],
   sawmill: [
-    { minLevel: 1, src: "./assets/custom/sawmill.png", width: 170, height: 170 },
+    { minLevel: 1, src: "./assets/custom/sawmill.png", width: 118, height: 118 },
   ],
   quarry: [
-    { minLevel: 1, src: "./assets/custom/quarry.png", width: 170, height: 170 },
+    { minLevel: 1, src: "./assets/custom/quarry.png", width: 118, height: 118 },
   ],
   storage: [
-    { minLevel: 1, src: "./assets/custom/storage.png", width: 200, height: 200 },
+    { minLevel: 1, src: "./assets/custom/storage.png", width: 140, height: 140 },
   ],
 };
 
@@ -58,6 +58,7 @@ const closeBtnEl = document.querySelector(".close-btn");
 const template = document.getElementById("buildingTemplate");
 
 const mapNodes = new Map();
+const spriteHitCache = new Map();
 let state = null;
 let requestInFlight = false;
 let initData = "";
@@ -94,6 +95,60 @@ function getBuildingSprite(buildingId, level) {
     }
   }
   return selected;
+}
+
+function getSpriteHitCanvas(spriteEl) {
+  const src = spriteEl.currentSrc || spriteEl.src;
+  if (!src || !spriteEl.naturalWidth || !spriteEl.naturalHeight) return null;
+
+  const cacheKey = `${src}::${spriteEl.naturalWidth}x${spriteEl.naturalHeight}`;
+  if (spriteHitCache.has(cacheKey)) return spriteHitCache.get(cacheKey);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = spriteEl.naturalWidth;
+  canvas.height = spriteEl.naturalHeight;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) return null;
+  ctx.drawImage(spriteEl, 0, 0, canvas.width, canvas.height);
+  spriteHitCache.set(cacheKey, canvas);
+  return canvas;
+}
+
+function isSpritePixelHit(event, spriteEl) {
+  if (!spriteEl || spriteEl.classList.contains("hidden")) return false;
+  if (event.detail === 0) return true;
+
+  const rect = spriteEl.getBoundingClientRect();
+  if (rect.width <= 0 || rect.height <= 0) return false;
+  const localX = event.clientX - rect.left;
+  const localY = event.clientY - rect.top;
+  if (localX < 0 || localY < 0 || localX > rect.width || localY > rect.height) return false;
+
+  const hitCanvas = getSpriteHitCanvas(spriteEl);
+  if (!hitCanvas) return true;
+  const pixelX = Math.max(0, Math.min(hitCanvas.width - 1, Math.floor((localX / rect.width) * hitCanvas.width)));
+  const pixelY = Math.max(0, Math.min(hitCanvas.height - 1, Math.floor((localY / rect.height) * hitCanvas.height)));
+  const hitCtx = hitCanvas.getContext("2d", { willReadFrequently: true });
+  if (!hitCtx) return true;
+  const alpha = hitCtx.getImageData(pixelX, pixelY, 1, 1).data[3];
+  return alpha > 12;
+}
+
+function createResourceStatChip(resource, text, warn = false) {
+  const chip = document.createElement("span");
+  chip.className = `stat-chip resource-stat-chip${warn ? " warn" : ""}`;
+
+  const icon = document.createElement("img");
+  icon.className = "stat-resource-icon";
+  icon.src = RESOURCE_ICONS[resource] || "";
+  icon.alt = RESOURCE_META[resource]?.label || resource;
+
+  const label = document.createElement("span");
+  label.textContent = text;
+
+  chip.appendChild(icon);
+  chip.appendChild(label);
+  return chip;
 }
 
 function setStatus(message, isError = false) {
@@ -225,16 +280,10 @@ function renderPanel() {
     const claimable = getClaimableForBuilding(state, building.id);
     const storedRaw = Math.floor(state.claimables?.[building.id] || 0);
 
-    const storedChip = document.createElement("span");
-    storedChip.className = "stat-chip";
-    storedChip.textContent = `${RESOURCE_META[resource].icon} Stored ${formatNumber(storedRaw)}`;
-    panelProductionEl.appendChild(storedChip);
+    panelProductionEl.appendChild(createResourceStatChip(resource, `Stored ${formatNumber(storedRaw)}`));
 
     if (claimable && claimable.collectible > 0) {
-      const readyChip = document.createElement("span");
-      readyChip.className = "stat-chip";
-      readyChip.textContent = `Ready ${RESOURCE_META[resource].icon} ${formatNumber(claimable.collectible)}`;
-      panelProductionEl.appendChild(readyChip);
+      panelProductionEl.appendChild(createResourceStatChip(resource, `Ready ${formatNumber(claimable.collectible)}`));
     }
 
     if (level > 0) {
@@ -272,11 +321,8 @@ function renderPanel() {
 
   panelCostEl.innerHTML = "";
   for (const [resource, amount] of Object.entries(readiness.cost || {})) {
-    const chip = document.createElement("span");
     const enough = (state.resources[resource] || 0) >= amount;
-    chip.className = `stat-chip${enough ? "" : " warn"}`;
-    chip.textContent = `${RESOURCE_META[resource].icon} ${formatNumber(amount)}`;
-    panelCostEl.appendChild(chip);
+    panelCostEl.appendChild(createResourceStatChip(resource, formatNumber(amount), !enough));
   }
 
   panelRulesEl.innerHTML = "";
@@ -391,8 +437,8 @@ function buildMapNodes() {
 
   for (const building of BUILDINGS) {
     const node = template.content.firstElementChild.cloneNode(true);
-    node.style.left = `${building.pos.x}%`;
-    node.style.top = `${building.pos.y}%`;
+    node.style.setProperty("--node-x", `${building.pos.x}%`);
+    node.style.setProperty("--node-y", `${building.pos.y}%`);
 
     const buildingButton = node.querySelector(".building");
     const collectButton = node.querySelector(".collect-btn");
@@ -401,8 +447,10 @@ function buildMapNodes() {
     const spriteEl = node.querySelector(".building-sprite");
     const placeholderEl = node.querySelector(".building-placeholder");
 
-    buildingButton.addEventListener("click", async () => {
+    buildingButton.addEventListener("click", async (event) => {
       if (!state) return;
+      if (!isSpritePixelHit(event, spriteEl)) return;
+
       state.selected = building.id;
       panelBuildingId = building.id;
       render();
